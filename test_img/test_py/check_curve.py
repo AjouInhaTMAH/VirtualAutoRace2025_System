@@ -71,89 +71,91 @@ filtered_img = detect_color(img,img_hsv)
 warped_img = BEV_img_warp(filtered_img,img_y,img_x)
 bin_img = img_binary(warped_img)
 
+class sliding:
+    def __init__(self):
+        self.midpoint = None
+        self.leftx_base = None
+        self.rightx_base = None
 
-# # 출력
-# cv2.imshow("bin_img", bin_img)
-# cv2.waitKey(0)
-# cv2.destroyAllWindows()
-def sliding_window_adaptive(binary_img, nwindows=10, margin=80, minpix=10):
-    out_img = np.dstack([binary_img]*3) * 255
-    histogram = np.sum(binary_img[binary_img.shape[0]//2:, :], axis=0)
-
-    midpoint = histogram.shape[0] // 2
-    leftx_base = np.argmax(histogram[:midpoint])
-    rightx_base = np.argmax(histogram[midpoint:]) + midpoint
-
-    window_height = binary_img.shape[0] // nwindows
-    nonzero = binary_img.nonzero()
-    nonzeroy = np.array(nonzero[0])
-    nonzerox = np.array(nonzero[1])
-
-    leftx_current = leftx_base
-    lefty_current = binary_img.shape[0] - window_height // 2
-
-    rightx_current = rightx_base
-    righty_current = binary_img.shape[0] - window_height // 2
-
-    left_lane_inds = []
-    right_lane_inds = []
-
-    for window in range(nwindows):
-        # 윈도우 범위 (적응형 이동)
-        win_y_low_left = lefty_current - window_height // 2
-        win_y_high_left = lefty_current + window_height // 2
-        win_xleft_low = leftx_current - margin
-        win_xleft_high = leftx_current + margin
-
-        win_y_low_right = righty_current - window_height // 2
-        win_y_high_right = righty_current + window_height // 2
-        win_xright_low = rightx_current - margin
-        win_xright_high = rightx_current + margin
-
-        # 시각화용 사각형
-        cv2.rectangle(out_img, (win_xleft_low, win_y_low_left), (win_xleft_high, win_y_high_left), (0,255,0), 2)
-        cv2.rectangle(out_img, (win_xright_low, win_y_low_right), (win_xright_high, win_y_high_right), (0,255,0), 2)
-
-        # 윈도우 안 픽셀 인덱스
-        good_left_inds = ((nonzeroy >= win_y_low_left) & (nonzeroy < win_y_high_left) &
-                          (nonzerox >= win_xleft_low) & (nonzerox < win_xleft_high)).nonzero()[0]
-        good_right_inds = ((nonzeroy >= win_y_low_right) & (nonzeroy < win_y_high_right) &
-                           (nonzerox >= win_xright_low) & (nonzerox < win_xright_high)).nonzero()[0]
-
-        left_lane_inds.append(good_left_inds)
-        right_lane_inds.append(good_right_inds)
-
-        if len(good_left_inds) > minpix:
-            leftx_current = int(np.mean(nonzerox[good_left_inds]))
-            lefty_current = int(np.min(nonzeroy[good_left_inds]))
+        self.window_height = None
+        self.nonzero = None
+        self.nonzeroy = None
+        self.nonzerox = None
+            
+    def sliding_window_lane_calculation(self,x_current,y_current,lane_inds):
+        flag = True
+        win_y_low = y_current - self.window_height // 2
+        win_y_high = y_current + self.window_height // 2
+        win_x_low = x_current - self.margin
+        win_x_high = x_current + self.margin
+        cv2.rectangle(self.out_img, (win_x_low, win_y_low), (win_x_high, win_y_high), (0,255,0), 2)
+        good_inds = ((self.nonzeroy >= win_y_low) & (self.nonzeroy < win_y_high) &
+                            (self.nonzerox >= win_x_low) & (self.nonzerox < win_x_high)).nonzero()[0]
+        lane_inds.append(good_inds)
+        if len(good_inds) > self.minpix:
+            print("x_current , np.median(self.nonzerox[good_inds])",x_current ,np.median(self.nonzerox[good_inds]))
+            x_current = int(np.average(self.nonzerox[good_inds], weights=weights))
+            y_current -= self.window_height
         else:
-            lefty_current = max(lefty_current - window_height, 0)
-
-        if len(good_right_inds) > minpix:
-            rightx_current = int(np.mean(nonzerox[good_right_inds]))
-            righty_current = int(np.min(nonzeroy[good_right_inds]))
+            flag = False
+        return x_current,y_current, flag
+    
+    def sliding_window_adaptive(self,binary_img, nwindows=15, margin=50, minpix=200):
+        if len(binary_img.shape) == 2:
+            self.out_img = cv2.cvtColor(binary_img, cv2.COLOR_GRAY2BGR)
         else:
-            righty_current = max(righty_current - window_height, 0)
+            self.out_img = binary_img.copy()
+        # self.out_img = np.dstack([binary_img]*3) * 255
+        histogram = np.sum(binary_img[binary_img.shape[0]//2:, :], axis=0)
+        left_flag = True
+        right_flag = True
+        self.margin = margin
+        self.minpix = minpix
+        self.midpoint = histogram.shape[0] // 2
+        self.leftx_base = np.argmax(histogram[:self.midpoint])
+        self.rightx_base = np.argmax(histogram[self.midpoint:]) + self.midpoint
 
-        print(f"Window {window}: lefty_current={lefty_current}, righty_current={righty_current}")
+        self.window_height = binary_img.shape[0] // nwindows
+        self.nonzero = binary_img.nonzero()
+        self.nonzeroy = np.array(self.nonzero[0])
+        self.nonzerox = np.array(self.nonzero[1])
 
-    # 모든 인덱스 합치기
-    left_lane_inds = np.concatenate(left_lane_inds)
-    right_lane_inds = np.concatenate(right_lane_inds)
+        leftx_current = self.leftx_base
+        lefty_current = binary_img.shape[0] - self.window_height // 2
 
-    # 좌우 픽셀 좌표
-    leftx = nonzerox[left_lane_inds]
-    lefty = nonzeroy[left_lane_inds]
-    rightx = nonzerox[right_lane_inds]
-    righty = nonzeroy[right_lane_inds]
+        rightx_current = self.rightx_base
+        righty_current = binary_img.shape[0] - self.window_height // 2
 
-    # 폴리 피팅 (없으면 None)
-    left_fit = np.polyfit(lefty, leftx, 2) if len(leftx) > 0 else None
-    right_fit = np.polyfit(righty, rightx, 2) if len(rightx) > 0 else None
+        left_lane_inds = []
+        right_lane_inds = []
 
-    return left_fit, right_fit, out_img
+        for window in range(nwindows):
+            # 윈도우 범위 (적응형 이동)
+            if left_flag:
+                leftx_current,lefty_current,left_flag = self.sliding_window_lane_calculation(leftx_current,lefty_current,left_lane_inds)
+            if right_flag:
+                rightx_current,righty_current,right_flag = self.sliding_window_lane_calculation(rightx_current,righty_current,right_lane_inds)
 
-left_fit, right_fit, vis_img = sliding_window_adaptive(bin_img)
+            print(f"Window {window}: lefty_current={lefty_current}, righty_current={righty_current}")
+
+        # 모든 인덱스 합치기
+        left_lane_inds = np.concatenate(left_lane_inds)
+        right_lane_inds = np.concatenate(right_lane_inds)
+
+        # 좌우 픽셀 좌표
+        leftx = self.nonzerox[left_lane_inds]
+        lefty = self.nonzeroy[left_lane_inds]
+        rightx = self.nonzerox[right_lane_inds]
+        righty = self.nonzeroy[right_lane_inds]
+
+        # 폴리 피팅 (없으면 None)
+        left_fit = np.polyfit(lefty, leftx, 2) if len(leftx) > 0 else None
+        right_fit = np.polyfit(righty, rightx, 2) if len(rightx) > 0 else None
+
+        return left_fit, right_fit, self.out_img
+
+ss = sliding()
+left_fit, right_fit, vis_img = ss.sliding_window_adaptive(bin_img)
 
 if left_fit is not None:
     print("왼쪽 차선 곡선:", left_fit)
