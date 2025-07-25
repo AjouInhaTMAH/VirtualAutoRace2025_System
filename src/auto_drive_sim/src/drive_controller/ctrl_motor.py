@@ -12,11 +12,10 @@ import rospy
 from std_msgs.msg import Float64
 from utils import check_timer
 
-class CtrlMotorNode:
+class CtrlMotor:
     def __init__(self):
         # ROS 노드 초기화
-        rospy.init_node('CtrlMotorNode', anonymous=True)
-        print(f"CtrlMotorNode start")
+        print(f"CtrlMotor start")
         # pub 정리
         # 모터 pub 생성
         self.motor_pub = rospy.Publisher('/commands/motor/speed', Float64, queue_size=1)
@@ -39,10 +38,3 @@ class CtrlMotorNode:
         self.rate.sleep()
         self.check_timer.end()
         self.check_timer.check()
-
-if __name__ == '__main__':
-    try:
-        node = CtrlMotorNode()
-        rospy.spin()
-    except rospy.ROSInterruptException:
-        pass
