@@ -32,7 +32,6 @@ class CtrlMotor:
         self.motor_pub_func()
         
     def motor_pub_func(self):
-        msg = f"Hello ROS! {rospy.get_time():.2f}"
         self.motor_cmd_msg_pub.data = self.motor_speed_CB * 300
         self.motor_pub.publish(self.motor_cmd_msg_pub)
         self.rate.sleep()

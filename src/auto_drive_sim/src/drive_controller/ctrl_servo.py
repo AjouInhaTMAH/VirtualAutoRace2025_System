@@ -32,7 +32,6 @@ class CtrlServo:
         self.servo_pub_func()
         
     def servo_pub_func(self):
-        msg = f"Hello ROS! {rospy.get_time():.2f}"
         self.servo_cmd_msg_pub.data = ((self.servo_steer_CB / 19.5 + 1)) /2
         self.servo_pub.publish(self.servo_cmd_msg_pub)
         self.rate.sleep()
