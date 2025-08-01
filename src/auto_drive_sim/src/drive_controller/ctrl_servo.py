@@ -12,11 +12,10 @@ import rospy
 from std_msgs.msg import Float64
 from utils import check_timer
 
-class CtrlServoNode:
+class CtrlServo:
     def __init__(self):
         # ROS 노드 초기화
-        rospy.init_node('CtrlServoNode', anonymous=True)
-        print(f"CtrlServoNode start")
+        print(f"CtrlServo start")
         # pub 정리
         # 모터 pub 생성
         self.servo_pub = rospy.Publisher('/commands/servo/position', Float64, queue_size=1)
@@ -33,16 +32,8 @@ class CtrlServoNode:
         self.servo_pub_func()
         
     def servo_pub_func(self):
-        msg = f"Hello ROS! {rospy.get_time():.2f}"
         self.servo_cmd_msg_pub.data = ((self.servo_steer_CB / 19.5 + 1)) /2
         self.servo_pub.publish(self.servo_cmd_msg_pub)
         self.rate.sleep()
-        self.check_timer.end()
+        print(f"servo {self.servo_cmd_msg_pub.data}")
         self.check_timer.check()
-
-if __name__ == '__main__':
-    try:
-        node = CtrlServoNode()
-        rospy.spin()
-    except rospy.ROSInterruptException:
-        pass
