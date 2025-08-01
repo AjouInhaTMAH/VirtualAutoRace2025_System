@@ -35,5 +35,5 @@ class CtrlMotor:
         self.motor_cmd_msg_pub.data = self.motor_speed_CB * 300
         self.motor_pub.publish(self.motor_cmd_msg_pub)
         self.rate.sleep()
-        self.check_timer.end()
+        print(f"speed {self.motor_cmd_msg_pub.data}")
         self.check_timer.check()

@@ -35,5 +35,5 @@ class CtrlServo:
         self.servo_cmd_msg_pub.data = ((self.servo_steer_CB / 19.5 + 1)) /2
         self.servo_pub.publish(self.servo_cmd_msg_pub)
         self.rate.sleep()
-        self.check_timer.end()
+        print(f"servo {self.servo_cmd_msg_pub.data}")
         self.check_timer.check()
